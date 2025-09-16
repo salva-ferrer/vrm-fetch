@@ -2,7 +2,7 @@
 
 Devuelve un objecto json con el formato:
 
-{
+```json {
   "timestamp_utc": "2025-09-16T13:16:40.302827Z",
   "timestamp_data": "2025-09-16T12:16:42Z",
   "generación": {
@@ -22,7 +22,7 @@ Devuelve un objecto json con el formato:
     "alarmas": []
   },
   "notes": []
-}
+}```
 
 Timestamp_utc es el tiempo en que se raliza la query.
 timestamp_data es el tiempo del dato que se visualiza.
