@@ -26,6 +26,12 @@ TOTAL_BUDGET_SEC = float(
 SESSION = requests.Session()
 
 
+def network_fail(context: str, exc: Exception) -> int:
+    msg = f"Fallo de red al {context}: {exc.__class__.__name__}: {exc}"
+    print(msg, file=sys.stderr)
+    return 1
+
+
 def auth_headers(token: str) -> Dict[str, str]:
     return {
         "X-Authorization": f"Token {token}",
@@ -221,12 +227,20 @@ def main() -> int:
         or "e5352471d358f93967e2e1b0bd660a33b63e6342935230f45098744174dd0687"
     )
 
-    user_id = users_me(token, t0)
+    try:
+        user_id = users_me(token, t0)
+    except (requests.RequestException, TimeoutError) as exc:
+        return network_fail("consultar /users/me", exc)
+
     if user_id is None:
         print("No pude obtener user id con /users/me", file=sys.stderr)
         return 2
 
-    installs = list_installations_by_user(token, user_id, t0)
+    try:
+        installs = list_installations_by_user(token, user_id, t0)
+    except (requests.RequestException, TimeoutError) as exc:
+        return network_fail("consultar /users/{id}/installations", exc)
+
     if not installs:
         print("No hay instalaciones en /users/{id}/installations", file=sys.stderr)
         return 3
@@ -258,7 +272,11 @@ def main() -> int:
 
     # GENERACIÓN
     if gen_id is not None:
-        vgen = venus_stats(token, gen_id, t0)
+        try:
+            vgen = venus_stats(token, gen_id, t0)
+        except (requests.RequestException, TimeoutError) as exc:
+            out["notes"].append(f"Error de red consultando generación: {exc}")
+            vgen = {}
         rec_g = vgen.get("records", {}) if isinstance(vgen, dict) else {}
         gen_tz = site_tz_map.get(gen_id)
 
@@ -292,7 +310,11 @@ def main() -> int:
 
     # CONSUMO
     if con_id is not None:
-        vcon = venus_stats(token, con_id, t0)
+        try:
+            vcon = venus_stats(token, con_id, t0)
+        except (requests.RequestException, TimeoutError) as exc:
+            out["notes"].append(f"Error de red consultando consumo: {exc}")
+            vcon = {}
         rec_c = vcon.get("records", {}) if isinstance(vcon, dict) else {}
         con_tz = site_tz_map.get(con_id)
 
