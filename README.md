@@ -30,3 +30,6 @@ Timestamp_utc es el tiempo en que se raliza la query.
 timestamp_data es el tiempo del dato que se visualiza.
 
 Embos permiten detectar si se esta conectado. timestamp_utc ~ timestamp_data si se esta conectado
+
+El token de la API VRM se lee de `pass show "Victron - VRM/access_token"` (primera línea).
+Se puede sobrescribir con la variable `VRM_TOKEN`, o cambiar la entrada de pass con `VRM_PASS_ENTRY`.

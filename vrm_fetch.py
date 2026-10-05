@@ -4,6 +4,7 @@ import datetime as dt
 import json
 import math
 import os
+import subprocess
 import sys
 import time
 import unicodedata
@@ -23,6 +24,8 @@ TOTAL_BUDGET_SEC = float(
     os.environ.get("VRM_TOTAL_TIMEOUT", "25")
 )  # overall script budget
 
+PASS_ENTRY = os.environ.get("VRM_PASS_ENTRY", "Victron - VRM/access_token")
+
 SESSION = requests.Session()
 
 
@@ -30,6 +33,34 @@ def network_fail(context: str, exc: Exception) -> int:
     msg = f"Fallo de red al {context}: {exc.__class__.__name__}: {exc}"
     print(msg, file=sys.stderr)
     return 1
+
+
+def get_token() -> str:
+    token = os.environ.get("VRM_TOKEN", "").strip()
+    if token:
+        return token
+    try:
+        res = subprocess.run(
+            ["pass", "show", PASS_ENTRY],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+    except FileNotFoundError:
+        raise SystemExit("No se pudo obtener el token VRM: 'pass' no está instalado.")
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(
+            f"No se pudo obtener el token VRM de pass ({PASS_ENTRY}): "
+            f"{exc.stderr.strip()}"
+        )
+    except subprocess.TimeoutExpired:
+        raise SystemExit(f"No se pudo obtener el token VRM: timeout en pass ({PASS_ENTRY}).")
+    lines = res.stdout.splitlines()
+    token = lines[0].strip() if lines else ""
+    if not token:
+        raise SystemExit(f"No se pudo obtener el token VRM: entrada vacía en pass ({PASS_ENTRY}).")
+    return token
 
 
 def auth_headers(token: str) -> Dict[str, str]:
@@ -222,10 +253,7 @@ def site_local_ms_to_utc_iso(ms: int, site_tz: Optional[str]) -> str:
 
 def main() -> int:
     t0 = time.monotonic()
-    token = (
-        os.environ.get("VRM_TOKEN")
-        or "e5352471d358f93967e2e1b0bd660a33b63e6342935230f45098744174dd0687"
-    )
+    token = get_token()
 
     try:
         user_id = users_me(token, t0)
